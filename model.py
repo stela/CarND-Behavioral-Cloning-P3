@@ -5,7 +5,7 @@ from keras.models import Sequential
 from scipy import ndimage
 import numpy as np
 
-epochs = 5
+epochs = 7
 
 # CSV reading from "04 - Training The Network" course chapter
 def loadTrainingData():
@@ -50,18 +50,27 @@ def model():
     model.add(Convolution2D(64, 3, 3, activation="relu"))
     model.add(Convolution2D(64, 3, 3, activation="relu"))
     model.add(Flatten())
-    # after flattening there should be around 1164 neurons (NVidia's original arch)
+    # TODO after flattening there should be around 1164 neurons (NVidia's original arch),
+    # but probably got 8036 or something
     model.add(Dense(100))
     model.add(Dense(50))
     model.add(Dense(10))
     return model
 
+# dummy-model from course materials - "Training the Network"
+def dummyModel():
+    model = Sequential()
+    model.add(Flatten(input_shape=[160,320,3]))
+    model.add(Dense(1))
+    return model
+
+
 def trainModel(model, X_data, y_data):
     model.compile(loss='mse', optimizer='adam')
-    # TODO switch to dummy-model and/or allow training
+    # TODO make training work like with dummy-model
     # ValueError: Error when checking model target:
     #   expected dense_3 to have shape (None, 10) but got array with shape (8036, 1)
-    model.fit(X_data, y_data, validation_split=0.2, shuffle=True)
+    model.fit(X_data, y_data, validation_split=0.2, shuffle=True, nb_epoch=epochs)
     return model
 
 def saveModel(model):
@@ -69,7 +78,8 @@ def saveModel(model):
 
 def main():
     X_train, y_train = loadTrainingData()
-    m = model()
+    m = dummyModel()
+    # m = model()
     m = trainModel(m, X_train, y_train)
     saveModel(m)
 
