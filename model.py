@@ -12,7 +12,7 @@ def loadTrainingData():
     lines = []
     with open('data/driving_log.csv') as csvfile:
         reader = csv.reader(csvfile)
-        next(reader, None) # skip the header line
+        next(reader, None) # skip the header line, if any
         for line in reader:
             lines.append(line)
 
@@ -22,6 +22,7 @@ def loadTrainingData():
         # csv columns:
         # center,left,right,steering,throttle,brake,speed
         source_path = line[0]
+        # TODO use left and right images if required, line[1] & line[2[]
         filename = source_path.split('/')[-1]
         current_path = 'data/IMG/' + filename
         image = ndimage.imread(current_path)
@@ -30,6 +31,7 @@ def loadTrainingData():
         measurements.append(measurement)
     X_train = np.array(images)
     y_train = np.array(measurements)
+    print('Loaded! Nr images: {}, nr measurements: {}'.format(len(images), len(measurements)))
     return X_train, y_train
 
 
@@ -40,6 +42,7 @@ def loadTrainingData():
 # https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025
 def model():
     model = Sequential()
+    # Normalize and crop the input images
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))
     # Nvidia's sample has an input here of 66x200, subsample (3,3) or (4,4) first layer instead of (2,2)???
@@ -55,6 +58,7 @@ def model():
     model.add(Dense(100))
     model.add(Dense(50))
     model.add(Dense(10))
+    model.add(Dense(1))
     return model
 
 # dummy-model from course materials - "Training the Network"
@@ -67,9 +71,6 @@ def dummyModel():
 
 def trainModel(model, X_data, y_data):
     model.compile(loss='mse', optimizer='adam')
-    # TODO make training work like with dummy-model
-    # ValueError: Error when checking model target:
-    #   expected dense_3 to have shape (None, 10) but got array with shape (8036, 1)
     model.fit(X_data, y_data, validation_split=0.2, shuffle=True, nb_epoch=epochs)
     return model
 
@@ -78,8 +79,7 @@ def saveModel(model):
 
 def main():
     X_train, y_train = loadTrainingData()
-    m = dummyModel()
-    # m = model()
+    m = model()
     m = trainModel(m, X_train, y_train)
     saveModel(m)
 
