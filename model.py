@@ -3,43 +3,57 @@ from keras.layers import Lambda, Cropping2D, Convolution2D, Flatten, Dense, Drop
 from keras.models import Sequential
 from scipy import ndimage
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
 epochs = 5
 
-# CSV reading from "04 - Training The Network" course chapter
-def load_training_data():
+# CSV and image reading reading from "04 - Training The Network" and "Generators" course chapters
+# Returns train_samples, validation_samples
+def load_train_and_validation_csv_lines():
     lines = []
     with open('data/driving_log.csv') as csvfile:
         reader = csv.reader(csvfile)
-        next(reader, None) # skip the header line, if any
+        next(reader, None)  # skip the header line, if any (otherwise ignore first sample)
         for line in reader:
             lines.append(line)
+        train_samples, validation_samples = train_test_split(lines, test_size=0.2)
+    return train_samples, validation_samples
 
-    images = []
-    measurements = []
-    for line in lines:
-        # csv columns:
-        # 0=center,1=left,2=right,3=steering,4=throttle,5=brake,6=speed
-        source_path = line[0]
-        left_source_path = line[1]
-        right_source_path = line[2]
-        measurement = float(line[3]) # line[3] is a string (steering angle)
-        # TODO use left and right images if required, line[1] & line[2], with adjusted steering
-        # TODO mirror images and reverse steering-input to remove left-bias
-        # TODO drop some straight-forward data points, overrepresented
-        center_image = read_image(source_path)
-        left_image = read_image(left_source_path)
-        right_image = read_image(right_source_path)
-        # Steering angles from mouse is in the range of -25 (leftmost) to +25 (rightmost)
-        # +/- 5 seemed to be what I would use for a minor correction
-        side_camera_correction = 5.0
-        append_image_and_measurement(images, measurements, center_image, measurement)
-        append_image_and_measurement(images, measurements, left_image, measurement + side_camera_correction)
-        append_image_and_measurement(images, measurements, right_image, measurement - side_camera_correction)
-    X_train = np.array(images)
-    y_train = np.array(measurements)
-    print('Loaded! Nr images: {}, nr measurements: {}'.format(len(images), len(measurements)))
-    return X_train, y_train
+
+def driving_log_data_generator(samples, batch_size=256):
+    num_samples = len(samples)
+    while 1:  # Loop forever so the generator never terminates
+        shuffle(samples)
+        for offset in range(0, num_samples, batch_size):
+            batch_samples = samples[offset:offset+batch_size]
+            images = []
+            angles = []
+            for line in batch_samples:
+                # csv columns:
+                # 0=center,1=left,2=right,3=steering,4=throttle,5=brake,6=speed
+                source_path = line[0]
+                left_source_path = line[1]
+                right_source_path = line[2]
+                measurement = float(line[3]) # line[3] is a string (steering angle)
+                # TODO use left and right images if required, line[1] & line[2], with adjusted steering
+                # TODO mirror images and reverse steering-input to remove left-bias
+                # TODO drop some straight-forward data points, overrepresented
+                center_image = read_image(source_path)
+                left_image = read_image(left_source_path)
+                right_image = read_image(right_source_path)
+                # Steering angles from mouse is in the range of -25 (leftmost) to +25 (rightmost)
+                # +/- 5 seemed to be what I would use for a minor correction
+                side_camera_correction = 5.0
+                append_image_and_measurement(images, angles, center_image, measurement)
+                append_image_and_measurement(images, angles, left_image, measurement + side_camera_correction)
+                append_image_and_measurement(images, angles, right_image, measurement - side_camera_correction)
+
+            # yield batch at a time for training/validation
+            X_train = np.array(images)
+            y_train = np.array(angles)
+            # shuffle again, mixes up center/left/right samples. useful?
+            yield shuffle(X_train, y_train)
 
 
 def read_image(source_path):
@@ -97,35 +111,44 @@ def create_model():
 
     # after flattening there should be around 1164 neurons (NVidia's original arch),
     model.add(Dense(100, activation='elu'))
-    #model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(50, activation='elu'))
-    #model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(10, activation='elu'))
-    #model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(1))
     return model
+
 
 # dummy-model from course materials - "Training the Network"
-def dummyModel():
+def dummy_model():
     model = Sequential()
-    model.add(Flatten(input_shape=[160,320,3]))
+    model.add(Flatten(input_shape=[160, 320, 3]))
     model.add(Dense(1))
     return model
 
 
-def trainModel(model, X_data, y_data):
+def train_model(model, train_generator, validation_generator, nr_train_samples, nr_validation_samples):
     model.compile(loss='mse', optimizer='adam')
-    model.fit(X_data, y_data, validation_split=0.2, shuffle=True, nb_epoch=epochs)
+    model.fit_generator(train_generator, samples_per_epoch=nr_train_samples,
+                        validation_data=validation_generator, nb_val_samples=nr_validation_samples,
+                        nb_epoch=epochs)
     return model
+
 
 def save_model(model):
     model.save('model.h5')
 
+
 def main():
-    X_train, y_train = load_training_data()
-    m = create_model()
-    m = trainModel(m, X_train, y_train)
-    save_model(m)
+    train_samples, validation_samples = load_train_and_validation_csv_lines()
+    train_generator = driving_log_data_generator(train_samples, batch_size=256)
+    validation_generator = driving_log_data_generator(validation_samples, batch_size=256)
+    model = create_model()
+
+    model = train_model(model, train_generator, validation_generator,
+                        len(train_samples), len(validation_samples))
+    save_model(model)
+
 
 main()
-
