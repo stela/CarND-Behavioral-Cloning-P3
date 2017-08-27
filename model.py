@@ -8,6 +8,7 @@ from sklearn.utils import shuffle
 
 epochs = 5
 
+
 # CSV and image reading reading from "04 - Training The Network" and "Generators" course chapters
 # Returns train_samples, validation_samples
 def load_train_and_validation_csv_lines():
@@ -19,6 +20,10 @@ def load_train_and_validation_csv_lines():
             lines.append(line)
         train_samples, validation_samples = train_test_split(lines, test_size=0.2)
     return train_samples, validation_samples
+
+
+# Method below adds left/right besides center samples, don't use csv-lines-count as-is later on
+sample_expansion_factor = 3
 
 
 def driving_log_data_generator(samples, batch_size=256):
@@ -147,7 +152,8 @@ def main():
     model = create_model()
 
     model = train_model(model, train_generator, validation_generator,
-                        len(train_samples), len(validation_samples))
+                        sample_expansion_factor * len(train_samples),
+                        sample_expansion_factor * len(validation_samples))
     save_model(model)
 
 
