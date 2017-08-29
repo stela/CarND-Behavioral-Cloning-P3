@@ -49,7 +49,7 @@ def driving_log_data_generator(samples, batch_size=256):
                 right_image = read_image(right_source_path)
                 # Steering angles from mouse is in the range of -25 (leftmost) to +25 (rightmost)
                 # +/- 5 seemed to be what I would use for a minor correction
-                side_camera_correction = 5.0
+                side_camera_correction = 0.3
                 append_image_and_measurement(images, angles, center_image, measurement)
                 append_image_and_measurement(images, angles, left_image, measurement + side_camera_correction)
                 append_image_and_measurement(images, angles, right_image, measurement - side_camera_correction)
