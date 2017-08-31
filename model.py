@@ -1,5 +1,5 @@
 import csv
-from keras.layers import Lambda, Cropping2D, Convolution2D, Flatten, Dense, Dropout
+from keras.layers import Lambda, Cropping2D, Convolution2D, Flatten, Dense
 from keras.models import Sequential
 from scipy import ndimage
 import numpy as np
@@ -26,6 +26,9 @@ def load_train_and_validation_csv_lines():
 sample_expansion_factor = 3
 
 
+# Not using a generator caused my laptop to slow to a crawl while swapping
+# when using left/right images besides the center image
+# (generator code based on the one provided in the course materials)
 def driving_log_data_generator(samples, batch_size=256):
     num_samples = len(samples)
     while 1:  # Loop forever so the generator never terminates
@@ -41,14 +44,12 @@ def driving_log_data_generator(samples, batch_size=256):
                 left_source_path = line[1]
                 right_source_path = line[2]
                 measurement = float(line[3]) # line[3] is a string (steering angle)
-                # TODO use left and right images if required, line[1] & line[2], with adjusted steering
-                # TODO mirror images and reverse steering-input to remove left-bias
-                # TODO drop some straight-forward data points, overrepresented
+                # use left, center and right images, with adjusted steering left/right
                 center_image = read_image(source_path)
                 left_image = read_image(left_source_path)
                 right_image = read_image(right_source_path)
                 # Steering angles from mouse is in the range of -25 (leftmost) to +25 (rightmost)
-                # +/- 5 seemed to be what I would use for a minor correction
+                # +/- 0.3 gave reasonably smooth steering
                 side_camera_correction = 0.3
                 append_image_and_measurement(images, angles, center_image, measurement)
                 append_image_and_measurement(images, angles, left_image, measurement + side_camera_correction)
@@ -57,7 +58,7 @@ def driving_log_data_generator(samples, batch_size=256):
             # yield batch at a time for training/validation
             X_train = np.array(images)
             y_train = np.array(angles)
-            # shuffle again, mixes up center/left/right samples. useful?
+            # shuffle again, mixes up center/left/right samples within the batch (helpful?)
             yield shuffle(X_train, y_train)
 
 
@@ -89,10 +90,11 @@ def create_model():
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))
 
     # Nvidia's sample has an input here of 66x200, however our input is 65x320
-    # subsampling/striding (2,3) for the first layer instead of (2,2)
-    # and using a wider kernel (5,7 instead of 5,5)
+    # Considered subsampling/striding (2,3) for the first layer instead of (2,2)
+    # and using a wider kernel (5,7 instead of 5,5), however the original design worked fine
     # originally: model.add(Convolution2D(24, 5, 5, subsample=(2,2), activation="relu"))
-    # model.add(Convolution2D(24, 5, 7, subsample=(2, 3), activation="elu"))
+    # The elu activation function used here is supposed to learn faster than relu, see
+    # https://www.picalike.com/blog/2015/11/28/relu-was-yesterday-tomorrow-comes-elu/
     model.add(Convolution2D(24, 5, 5, subsample=(2, 2), activation="elu"))
 
     # input 31x158 (nvidia: 31x98)
@@ -109,18 +111,16 @@ def create_model():
 
     # input 64x1x33 (nvidia: 64x1x18)
     model.add(Flatten())
-    # nvidia: flattened to 1164 according to figure, 1152 according to math
+    # nvidia: flattened to 1164 according to figure in article, but 1152 according to math
     # flattens to 2112 with kernel (5,5) & subsample=(2,2) in first layer
     # flattens to 1280 with kernel (5,7) & subsample=(2,3) in first layer
     # flattens to  832 with kernel (5,9) & subsample=(2,4) in first layer
 
     # after flattening there should be around 1164 neurons (NVidia's original arch),
     model.add(Dense(100, activation='elu'))
-    # model.add(Dropout(0.5))
     model.add(Dense(50, activation='elu'))
-    # model.add(Dropout(0.5))
     model.add(Dense(10, activation='elu'))
-    # model.add(Dropout(0.5))
+    # Adding dropout between the dense layers didn't seem to help, not overfitting "enough"?
     model.add(Dense(1))
     return model
 
@@ -132,7 +132,7 @@ def dummy_model():
     model.add(Dense(1))
     return model
 
-
+# Train using adam optimizer
 def train_model(model, train_generator, validation_generator, nr_train_samples, nr_validation_samples):
     model.compile(loss='mse', optimizer='adam')
     model.fit_generator(train_generator, samples_per_epoch=nr_train_samples,
@@ -144,12 +144,12 @@ def train_model(model, train_generator, validation_generator, nr_train_samples, 
 def save_model(model):
     model.save('model.h5')
 
-
+# Main method
 def main():
     train_samples, validation_samples = load_train_and_validation_csv_lines()
     train_generator = driving_log_data_generator(train_samples, batch_size=256)
     validation_generator = driving_log_data_generator(validation_samples, batch_size=256)
-    model = create_model()
+    model = create_model()  # Use dummy_model to tune the rest for quick turnaround
 
     model = train_model(model, train_generator, validation_generator,
                         sample_expansion_factor * len(train_samples),
