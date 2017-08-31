@@ -76,7 +76,7 @@ def append_image_and_measurement(images, measurements, image, measurement):
 
 # Below initially copied from the video in the course materials:
 # 14. Even More Powerful Network - 11 - NVIDIA architecture
-# Creates the network described at
+# Creates the "DAVE-2" network described at
 # https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025
 # Modified to shrink down the width to be similar to nvidia's original architecture
 def create_model():

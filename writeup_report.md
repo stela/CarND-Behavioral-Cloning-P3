@@ -50,23 +50,29 @@ The model.py file contains the code for training and saving the convolution neur
 
 ####1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+My model uses NVidia's [DAVE-2](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) network architecture. It consists of convolutional neural network (see the create_model() function) with:
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+- A normalization layer
+- A cropping layer to remove the sky and hood of the car
+- 5 convolutional layers, each having half the resolution of the previous layer but increasingly larger filter-sets
+- A flattening layer
+- 4 dense/fully connected layers of increasingly smaller size perform classification, the last single-node layer outputs the steering angle
+
 
 ####2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model does not contain dropout layers in order to reduce overfitting. I tried adding dropout layers between the dense layers, before the network wasn't performing well enough, but dropout seemed to only make things worse. 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track number 1. To my surprise, while it was only trained on track 1, it managed to complete much of track 2 before it drove off a cliff, it got confused by a sharp curve without any clear separation of the road at the start and end of the curve and made a fatal attempt to take a shortcut.
+
 
 ####3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+The model used an adam optimizer, so the learning rate was not tuned manually (model.py, train_model() function).
 
 ####4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, taking sharp curves near the inside and reversing direction (outside of recording sessions!) to reduce left/right bias. Besides the center image, both the left and right camera images were used. The left/right images were required to make the car steer properly in curves, a small steering angle correction of +/- 0.3 was made to stay on track.  
 
 For details about how I created the training data, see the next section. 
 
