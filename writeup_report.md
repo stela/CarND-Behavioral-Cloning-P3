@@ -107,6 +107,8 @@ The final model architecture (model.py, create_model()) consisted of a convoluti
   - 10
   - 1 (the steering angle)
 
+Throughout, the "elu" activation function is used. It is supposed to allow slightly faster training than the "relu" activation function. Use of an activation function introduces non-linearity, which is essential for learning non-linear/more abstract features.
+
 Here is a visualization fo the architecture, copied from [NVIDIA's article](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) about it:
 
 ![NVIDIA cnn architecture][model_visualization]
