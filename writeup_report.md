@@ -16,10 +16,10 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[model_visualization]: ./writeup_report_files/model_visualization.png "Model Visualization"
-[recovery_left]: ./writeup_report_files/recovery_left.png "Recovery Image"
-[recovery_right]: ./writeup_report_files/recovery_right.png "Recovery Image"
-[placeholder_small]: ./writeup_report_files/center.png "Center Image"
+[model_visualization]: ./writeup_report_files/cnn-architecture.png "Model Visualization"
+[left]: ./writeup_report_files/left.jpg "Left Image"
+[right]: ./writeup_report_files/right.jpg "Right Image"
+[center]: ./writeup_report_files/center.jpg "Center Image"
 
 ## Rubric Points
 ###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -61,9 +61,9 @@ My model uses NVidia's [DAVE-2](https://devblogs.nvidia.com/parallelforall/deep-
 
 ####2. Attempts to reduce overfitting in the model
 
-The model does not contain dropout layers in order to reduce overfitting. I tried adding dropout layers between the dense layers, before the network wasn't performing well enough, but dropout seemed to only make things worse. 
+The model does not contain dropout layers in order to reduce overfitting. I tried adding dropout layers between the dense layers, before the network was performing well enough, but dropout seemed to only make things worse.
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track number 1. To my surprise, while it was only trained on track 1, it managed to complete much of track 2 before it drove off a cliff, it got confused by a sharp curve without any clear separation of the road at the start and end of the curve and made a fatal attempt to take a shortcut.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (see training/validation split logic in load_train_and_validation_csv_lines()). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track number 1. To my surprise, while it was only trained on track 1, it managed to complete much of track 2 before it drove off a cliff, it got confused by a sharp curve without any clear separation of the road at the start and end of the curve and made a fatal attempt to take a shortcut.
 
 
 ####3. Model parameter tuning
@@ -80,52 +80,55 @@ For details about how I created the training data, see the next section.
 
 ####1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
+The overall strategy for deciding on a model architecture to start with, was partly determined by me having an old slow laptop to work on at the start of this project (limited CPU power and memory), and a desire to start with the most simple thing which could possibly work, in order to not make things unnecessarily complex. The Nvidia "DAVE-2" model fit the bill perfectly, it had both a fairly simple structure and limited size, and it was created exactly for the task at hand, so I thought there was a good chance at success with it.
 
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
+In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set (see load_train_and_validation_csv_lines()). After adding support for left/center/right images (with steering-angle compensation), the model had a similar mean squared error on the training set and on the validation set, implying there is little or no overfitting. That probably explains why my attempts of using dropout didn't improve driving performance. I think the lack of overfitting is also thanks to using a just-large-enough network, some of the networks introduced in the transfer learning and behaviour cloning section had a huge number of layers and nodes which might be more suited for more complex or abstract tasks than recognizing road and non-road.
 
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
+The final step was to run the simulator to see how well the car was driving around track one. Initially the car went off the track where there was a sharp curve and low-contrast roadside. To make the car handle turns better, I added left and right camera images with corrective steering angles. Initially I compensated with a way too high steering angle, which caused the care to zigzag on the road instead of driving smoothly. Going from +-5.0 to +-0.3 compensation took care of that.
 
-To combat the overfitting, I modified the model so that ...
-
-Then I ... 
-
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
-
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+At the end of the process, the vehicle is able to drive autonomously around track1 (the only track I trained it on) without leaving the road.
 
 ####2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture (model.py, create_model()) consisted of a convolution neural network with the following layers and layer sizes:
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+- A normalization layer (160x320x3)
+- A cropping layer to remove the sky and hood of the car (crop top 70 and bottom 25 pixels), out=65x320x3
+- 5 convolutional layers, first half having half the output resolution of the previous layer but increasingly larger filter-sets
+  - 24x31x158
+  - 36x14x77
+  - 48x5x37
+  - 64x3x35
+  - 64x1x31
+- A flattening layer (2112 outputs)
+- 4 dense/fully connected layers of increasingly smaller size perform classification, the last single-node layer outputs the steering angle
+  - 100
+  - 50
+  - 10
+  - 1 (the steering angle)
 
-![alt text][image1]
+Here is a visualization fo the architecture, copied from [Nvidia's article](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) about it:
+
+![Nvidia cnn architecture][model_visualization]
+
 
 ####3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+To capture good driving behavior, recorded several laps on track one using center lane driving, driving both directions to avoid bias of turning left or right. Here is an example image of center lane driving:
 
-![alt text][image2]
+![center camera near start of track 1][center]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+I also added the left and right camera images with +0.3 or -0.3 steering angle correction:
 
-![alt text][image3]
-![alt text][image4]
-![alt text][image5]
+![corresponding left camera][left]
+![corresponding right camera][right]
 
-Then I repeated this process on track two in order to get more data points.
+At this point the model performed well enough to safely drive several rounds of track 1 autonomously, and even though never trained for it, cleared much of the more difficult and different track 2 without prior practise.
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+If there was a need for future improvement, I would probably start with adding mirrored versions of the images. Then I would probably augment the images by adding tree-like shadows on random locations and of course, gathering more training data by driving more on both tracks.
 
-![alt text][image6]
-![alt text][image7]
+After the collection process, I had 11097 times 3 (left/center/right) data points. There was no preprocessing done of the images besides steering-angle conversions. Normalization and clipping were done in the model itself.
 
-Etc ....
+I finally randomly shuffled the data set and put 20% of the data into a validation set. For each batch of 256 driving-log entries, I shuffled the data again to avoid having the same left/center/right camera order.
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
-
-
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was about 5 as evidenced by no or little improvement of loss after that point. I used an adam optimizer so that manually setting or adjusting the learning rate wasn't necessary.
