@@ -50,7 +50,7 @@ The model.py file contains the code for training and saving the convolution neur
 
 ####1. An appropriate model architecture has been employed
 
-My model uses NVidia's [DAVE-2](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) network architecture. It consists of convolutional neural network (see the create_model() function) with:
+My model uses NVIDIA's [DAVE-2](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) network architecture. It consists of a convolutional neural network (see the create_model() function) with:
 
 - A normalization layer
 - A cropping layer to remove the sky and hood of the car
@@ -80,13 +80,13 @@ For details about how I created the training data, see the next section.
 
 ####1. Solution Design Approach
 
-The overall strategy for deciding on a model architecture to start with, was partly determined by me having an old slow laptop to work on at the start of this project (limited CPU power and memory), and a desire to start with the most simple thing which could possibly work, in order to not make things unnecessarily complex. The Nvidia "DAVE-2" model fit the bill perfectly, it had both a fairly simple structure and limited size, and it was created exactly for the task at hand, so I thought there was a good chance at success with it.
+The overall strategy for deciding on a model architecture to start with, was partly determined by me having an old slow laptop to work on at the start of this project (limited CPU power and memory), and a desire to start with the most simple thing which could possibly work, in order to not make things unnecessarily complex. The NVIDIA "DAVE-2" model fit the bill perfectly, it had both a fairly simple structure and limited size, and it was created exactly for the task at hand, so I thought there was a good chance at success with it.
 
 In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set (see load_train_and_validation_csv_lines()). After adding support for left/center/right images (with steering-angle compensation), the model had a similar mean squared error on the training set and on the validation set, implying there is little or no overfitting. That probably explains why my attempts of using dropout didn't improve driving performance. I think the lack of overfitting is also thanks to using a just-large-enough network, some of the networks introduced in the transfer learning and behaviour cloning section had a huge number of layers and nodes which might be more suited for more complex or abstract tasks than recognizing road and non-road.
 
 The final step was to run the simulator to see how well the car was driving around track one. Initially the car went off the track where there was a sharp curve and low-contrast roadside. To make the car handle turns better, I added left and right camera images with corrective steering angles. Initially I compensated with a way too high steering angle, which caused the care to zigzag on the road instead of driving smoothly. Going from +-5.0 to +-0.3 compensation took care of that.
 
-At the end of the process, the vehicle is able to drive autonomously around track1 (the only track I trained it on) without leaving the road.
+At the end of the process, the vehicle is able to drive autonomously around track 1 (the only track I trained it on) without leaving the road.
 
 ####2. Final Model Architecture
 
@@ -107,10 +107,11 @@ The final model architecture (model.py, create_model()) consisted of a convoluti
   - 10
   - 1 (the steering angle)
 
-Here is a visualization fo the architecture, copied from [Nvidia's article](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) about it:
+Here is a visualization fo the architecture, copied from [NVIDIA's article](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/#attachment_7025) about it:
 
-![Nvidia cnn architecture][model_visualization]
+![NVIDIA cnn architecture][model_visualization]
 
+The layer sizes above applies to NVIDIA's original camera image sizes, Udacity's virtual car has somewhat higher resolution cameras.
 
 ####3. Creation of the Training Set & Training Process
 
