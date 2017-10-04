@@ -8,12 +8,13 @@ from sklearn.utils import shuffle
 
 epochs = 5
 
+data_dir = 'data'
 
 # CSV and image reading reading from "04 - Training The Network" and "Generators" course chapters
 # Returns train_samples, validation_samples
 def load_train_and_validation_csv_lines():
     lines = []
-    with open('data/driving_log.csv') as csvfile:
+    with open(data_dir + '/driving_log.csv') as csvfile:
         reader = csv.reader(csvfile)
         next(reader, None)  # skip the header line, if any (otherwise ignore first sample)
         for line in reader:
@@ -64,7 +65,7 @@ def driving_log_data_generator(samples, batch_size=256):
 
 def read_image(source_path):
     filename = source_path.split('/')[-1]
-    current_path = 'data/IMG/' + filename
+    current_path = data_dir + '/IMG/' + filename
     image = ndimage.imread(current_path)
     return image
 
